@@ -5,7 +5,7 @@ import {StyleSheet} from 'react-native';
 export const AvatarWrapper = ({source}) => {
   return (
     <Avatar
-      bg="green.500"
+      bg="yellow.500"
       alignSelf="center"
       size="xl"
       source={{

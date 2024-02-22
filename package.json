@@ -1,5 +1,6 @@
 {
   "name": "concept_recall_chat_room",
+  "displayName": "Chat App",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -15,6 +16,7 @@
     "@react-navigation/native": "^6.1.10",
     "@react-navigation/native-stack": "^6.9.18",
     "@reduxjs/toolkit": "^2.2.1",
+    "moment": "^2.30.1",
     "native-base": "^3.4.28",
     "react": "18.2.0",
     "react-native": "0.73.4",

@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef, createRef} from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,6 +9,8 @@ import {
   FlatList,
   Dimensions,
   LayoutAnimation,
+  Animated,
+  InteractionManager,
 } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import {useDispatch, useSelector} from 'react-redux';
@@ -18,30 +20,32 @@ import {Actionsheet, Box, HStack, Icon, Stack, View} from 'native-base';
 import InputWrapper from '../components/Input';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import Feather from 'react-native-vector-icons/Feather';
+import AntDesign from 'react-native-vector-icons/AntDesign';
 import uuid from 'react-native-uuid';
+import moment from 'moment';
 
 const ChatRoom = ({navigation}) => {
   const dispatch = useDispatch();
-  const {user} = useSelector(state => state.auth);
+  const inputRef = createRef();
+  const fadeAnimRef = useRef(new Animated.Value(1));
+
+  let getTime = moment().format('h:mm A');
+
+  const {user} = useSelector(state => state.auth); //get auth data from redux
   const [inputMessage, setInputMessage] = useState('');
   const [attachmentFile, setAttachmentFile] = useState('');
   const [selectedMessage, setSelectedMessage] = useState('');
   const [openBottomSheet, setOpenBottomSheet] = useState(false);
-
   const [chatUser] = useState({
     name: user.username,
     profile_image: user.avatar,
     last_seen: 'online',
   });
 
-  const [currentUser] = useState({
-    name: user.username,
-  });
-
   const [messages, setMessages] = useState([
     {
       id: uuid.v4(),
-      sender: currentUser.name,
+      sender: chatUser.name,
       message: 'Hey there!',
       time: '6:01 PM',
     },
@@ -53,13 +57,13 @@ const ChatRoom = ({navigation}) => {
     },
     {
       id: uuid.v4(),
-      sender: currentUser.name,
+      sender: chatUser.name,
       message: 'I am good, how about you?',
       time: '6:02 PM',
     },
     {
       id: uuid.v4(),
-      sender: currentUser.name,
+      sender: chatUser.name,
       message: `😊😇`,
       time: '6:02 PM',
     },
@@ -71,7 +75,7 @@ const ChatRoom = ({navigation}) => {
     },
     {
       id: uuid.v4(),
-      sender: currentUser.name,
+      sender: chatUser.name,
       message: `That's great, when are you coming?`,
       time: '6:03 PM',
     },
@@ -89,7 +93,7 @@ const ChatRoom = ({navigation}) => {
     },
     {
       id: uuid.v4(),
-      sender: currentUser.name,
+      sender: chatUser.name,
       message: `Great, don't forget to bring me some mangoes.`,
       time: '6:05 PM',
     },
@@ -101,7 +105,7 @@ const ChatRoom = ({navigation}) => {
     },
     {
       id: uuid.v4(),
-      sender: currentUser.name,
+      sender: chatUser.name,
       message: `Great, don't forget to bring me some mangoes.`,
       time: '6:05 PM',
     },
@@ -113,52 +117,36 @@ const ChatRoom = ({navigation}) => {
     },
   ]);
 
-  console.log('selectedMessage', selectedMessage);
-  const getTime = date => {
-    var hours = date.getHours();
-    var minutes = date.getMinutes();
-    var ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12;
-    minutes = minutes < 10 ? '0' + minutes : minutes;
-    var strTime = hours + ':' + minutes + ' ' + ampm;
-    return strTime;
-  };
-
-  // ===========HANDLE SEND MESSAGE================
+  // ===========HANDLE SEND MESSAGE===========
   const sendMessage = () => {
     if (inputMessage === '') {
       return setInputMessage('');
     }
     // Enable layout animation
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
-    let t = getTime(new Date());
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
 
     if (selectedMessage) {
-      console.log('if=============================');
       // Editing an existing message
       let updatedMessages = messages.map(item =>
         item.id === selectedMessage.id
           ? {
               ...item,
               message: inputMessage,
-              time: t,
+              time: getTime,
               attachmentFile: attachmentFile,
             }
           : item,
       );
       setMessages(updatedMessages);
     } else {
-      console.log('else=============================');
-
       // Add new message
       setMessages([
         ...messages,
         {
           id: uuid.v4(),
-          sender: currentUser.name,
+          sender: chatUser.name,
           message: inputMessage,
-          time: t,
+          time: getTime,
           attachmentFile: attachmentFile,
         },
       ]);
@@ -169,14 +157,28 @@ const ChatRoom = ({navigation}) => {
     setSelectedMessage('');
   };
 
-  // ===========HANDLE DELETE=============
+  // ===========HANDLE DELETE=================
   const deleteMessage = () => {
-    const updatedMessages = messages.filter(
-      item => item.id !== selectedMessage.id,
-    );
-    setMessages(updatedMessages);
+    // Close the bottom sheet
     setOpenBottomSheet(false);
-    setSelectedMessage('');
+
+    setTimeout(() => {
+      Animated.sequence([
+        Animated.timing(fadeAnimRef.current, {
+          toValue: 0,
+          duration: 500, // Adjust the duration as needed
+          useNativeDriver: false,
+        }),
+      ]).start(() => {
+        const updatedMessages = messages.filter(
+          item => item.id !== selectedMessage.id,
+        );
+        setMessages(updatedMessages);
+        setSelectedMessage('');
+
+        fadeAnimRef.current.setValue(1);
+      });
+    }, 50);
   };
 
   // =============HANDLE EDIT MESSAGE==============
@@ -184,9 +186,12 @@ const ChatRoom = ({navigation}) => {
     setInputMessage(selectedMessage.message);
     setAttachmentFile(selectedMessage.attachmentFile);
     setOpenBottomSheet(false);
+    InteractionManager.runAfterInteractions(() => {
+      inputRef.current?.focus();
+    });
   };
 
-  // ===========HANDLE ATTACHMENT==================
+  // ===========HANDLE ATTACHMENT===============
   const handleImagePicker = () => {
     const options = {
       mediaType: 'photo',
@@ -251,12 +256,12 @@ const ChatRoom = ({navigation}) => {
           onClose={() => setOpenBottomSheet(false)}>
           <Actionsheet.Content>
             <Actionsheet.Item onPress={() => deleteMessage()}>
-              Delete
+              Remove
             </Actionsheet.Item>
             <Actionsheet.Item onPress={() => editMessage()}>
               Edit
             </Actionsheet.Item>
-            <Actionsheet.Item onPress={() => setSelectedMessage('')}>
+            <Actionsheet.Item onPress={() => setOpenBottomSheet(false)}>
               Cancel
             </Actionsheet.Item>
           </Actionsheet.Content>
@@ -266,85 +271,110 @@ const ChatRoom = ({navigation}) => {
           inverted={true}
           data={JSON.parse(JSON.stringify(messages)).reverse()}
           renderItem={({item, index}) => (
-            <TouchableWithoutFeedback key={index}>
-              <View style={{marginTop: 6}}>
-                <View
-                  style={{
-                    maxWidth: Dimensions.get('screen').width * 0.8,
-                    backgroundColor:
-                      item.sender === chatUser.name ? '#dfa725' : '#434f6b',
-                    alignSelf:
-                      item.sender === currentUser.name
-                        ? 'flex-end'
-                        : 'flex-start',
-                    marginHorizontal: 10,
-                    padding: 10,
-                    borderRadius: 8,
-                    borderBottomLeftRadius:
-                      item.sender === currentUser.name ? 8 : 0,
-                    borderBottomRightRadius:
-                      item.sender === currentUser.name ? 0 : 8,
-                  }}>
-                  {item.sender === currentUser.name && (
-                    <IconButtonWrapper
-                      position={'absolute'}
-                      left={-28}
-                      top={-5}
-                      onPress={() => {
-                        setOpenBottomSheet(true);
-                        setSelectedMessage(item);
-                      }}
-                      _icon={{
-                        color: '#000',
-                      }}
-                      icon={<Icon as={Feather} name="more-vertical" size={4} />}
-                    />
-                  )}
-                  <Text
+            <Animated.View
+              style={{
+                opacity:
+                  item.id === selectedMessage?.id ? fadeAnimRef.current : 1,
+              }}>
+              <TouchableWithoutFeedback key={index}>
+                <View style={{marginTop: 6}}>
+                  <View
                     style={{
-                      color: '#fff',
-                      fontSize: 16,
+                      maxWidth: Dimensions.get('screen').width * 0.8,
+                      backgroundColor:
+                        item.sender === chatUser.name ? '#d9a221' : '#434f6b',
+                      alignSelf:
+                        item.sender === chatUser.name
+                          ? 'flex-end'
+                          : 'flex-start',
+                      marginHorizontal: 10,
+                      padding: 10,
+                      borderRadius: 8,
+                      borderBottomLeftRadius:
+                        item.sender === chatUser.name ? 8 : 0,
+                      borderBottomRightRadius:
+                        item.sender === chatUser.name ? 0 : 8,
                     }}>
-                    {item.message}
-                  </Text>
-                  {item?.attachmentFile && (
-                    <View justifyContent={'start'} alignItems={'start'} mt={3}>
-                      <Image
-                        source={{uri: item?.attachmentFile}}
-                        style={{
-                          width: 80,
-                          height: 80,
-                          borderRadius: 8,
+                    {item.sender === chatUser.name && (
+                      <IconButtonWrapper
+                        position={'absolute'}
+                        left={-28}
+                        top={-5}
+                        onPress={() => {
+                          setOpenBottomSheet(true);
+                          setSelectedMessage(item);
                         }}
+                        _icon={{
+                          color: '#000',
+                        }}
+                        icon={
+                          <Icon as={Feather} name="more-vertical" size={4} />
+                        }
                       />
-                    </View>
-                  )}
-                  <Text
-                    style={{
-                      color: '#dfe4ea',
-                      fontSize: 14,
-                      alignSelf: 'flex-end',
-                    }}>
-                    {item.time}
-                  </Text>
+                    )}
+                    <Text
+                      style={{
+                        color: '#fff',
+                        fontSize: 16,
+                      }}>
+                      {item.message}
+                    </Text>
+                    {item?.attachmentFile && (
+                      <View
+                        justifyContent={'start'}
+                        alignItems={'start'}
+                        mt={3}>
+                        <Image
+                          source={{uri: item?.attachmentFile}}
+                          style={{
+                            width: 80,
+                            height: 80,
+                            borderRadius: 8,
+                          }}
+                        />
+                      </View>
+                    )}
+                    <Text
+                      style={{
+                        color: '#dfe4ea',
+                        fontSize: 14,
+                        alignSelf: 'flex-end',
+                      }}>
+                      {item.time}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-            </TouchableWithoutFeedback>
+              </TouchableWithoutFeedback>
+            </Animated.View>
           )}
         />
 
         <Stack style={{paddingVertical: 8}}>
           {attachmentFile && (
             <View px="2">
+              <Box
+                position={'absolute'}
+                style={{left: 85, zIndex: 1, top: -20}}>
+                <IconButtonWrapper
+                  onPress={() => {
+                    setAttachmentFile('');
+                  }}
+                  _icon={{
+                    color: '#434f6b',
+                  }}
+                  bg="white"
+                  icon={<Icon as={AntDesign} name="closecircleo" size={4} />}
+                />
+              </Box>
               <Image
                 source={{uri: attachmentFile}}
                 style={{
-                  width: '25%',
+                  width: '30%',
                   height: 100,
                   borderTopLeftRadius: 10,
                   borderTopRightRadius: 10,
-                  borderWidth: 1,
-                  borderColor: '#3a6ee8',
+                  borderWidth: 2,
+                  borderColor: '#434f6b',
                 }}
               />
             </View>
@@ -361,6 +391,7 @@ const ChatRoom = ({navigation}) => {
             borderRadius={4}>
             <InputWrapper
               w="80%"
+              ref={inputRef}
               height={50}
               borderRadius={1}
               onChangeText={text => setInputMessage(text)}
@@ -378,7 +409,7 @@ const ChatRoom = ({navigation}) => {
               _icon={{
                 color: 'yellow.400',
               }}
-              icon={<Icon as={FontAwesome} name="image" size={4} />}
+              icon={<Icon as={Feather} name="image" size={4} />}
             />
             <IconButtonWrapper
               onPress={() => {
@@ -413,17 +444,5 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f2f2ff',
-  },
-  messageInputView: {
-    display: 'flex',
-    flexDirection: 'row',
-    marginHorizontal: 14,
-    backgroundColor: '#fff',
-    borderRadius: 4,
-  },
-  messageInput: {
-    height: 40,
-    flex: 1,
-    paddingHorizontal: 10,
   },
 });

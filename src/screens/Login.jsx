@@ -1,6 +1,6 @@
 // src/screens/LoginScreen.js
 import React, {useCallback, useState} from 'react';
-import {Image, Alert, ToastAndroid} from 'react-native';
+import {Image, Alert, ToastAndroid, Dimensions} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {
   Avatar,
@@ -24,6 +24,9 @@ import {useDispatch} from 'react-redux';
 import {login} from '../redux/slices/authSlice';
 import InputWrapper from '../components/Input';
 import {IconButtonWrapper} from '../components/buttons/IconButtonWrapper';
+let {width, height} = Dimensions.get('screen');
+let HEIGHT = height;
+let WIDTH = width;
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -53,15 +56,13 @@ const Login = () => {
   const handleLogin = () => {
     // Perform validation logic here
     if (!username.trim()) {
-      ToastAndroid.show('Please enter username', ToastAndroid.SHORT);
+      ToastAndroid.show('Please enter user name', ToastAndroid.SHORT);
       return;
     } else if (!avatar) {
       ToastAndroid.show('Please upload profile image', ToastAndroid.SHORT);
     } else {
       // Perform login logic here
       // For now, just log the username and avatar URI
-      console.log('Username:', username);
-      console.log('Avatar URI:', avatar);
       dispatch(login({username, avatar}));
     }
   };
@@ -89,7 +90,7 @@ const Login = () => {
             }
           />
 
-          <Box position={'absolute'} right={'32'} top={'16'}>
+          <Box position={'absolute'} style={{right: WIDTH / 3.5, top: 70}}>
             <IconButtonWrapper
               onPress={handleImagePicker}
               borderRadius="full"
@@ -116,7 +117,7 @@ const Login = () => {
             <InputWrapper
               onChangeText={e => setUsername(e)}
               value={username}
-              placeholder="Enter username"
+              placeholder="Enter Username"
               variant="outline"
               borderWidth={1}
               borderRadius={12}

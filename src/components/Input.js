@@ -9,8 +9,7 @@ const InputWrapper = props => {
       fontSize={16}
       variant="unstyled"
       p={2}
-      placeholderTextColor={'#000'}
-      placeholder={props.placeHolder}
+      placeholderTextColor={'lightgrey'}
       InputLeftElement={props.leftIcon}
       InputRightElement={props.rightIcon}
     />

@@ -3,7 +3,6 @@ import authReducer from '../slices/authSlice';
 
 const rootReducer = combineReducers({
   auth: authReducer,
-  // Add more reducers as needed
 });
 
 export default rootReducer;
